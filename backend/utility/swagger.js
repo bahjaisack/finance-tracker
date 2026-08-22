@@ -27,7 +27,7 @@ const options = {
         url:
           process.env.NODE_ENV === "development"
             ? "http://localhost:5000/api"
-            : "https://mentorship-api-eem4.onrender.com/api",
+            : "https://finance-tracker-hoyb.onrender.com/api",
       },
     ],
 
