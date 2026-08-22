@@ -48,25 +48,66 @@ export const useUpdateTransaction = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...updatedData }) => {
-      const response = await apiClient.put(`/transactions/${id}`, updatedData);
+    mutationFn: async ({ id, data }) => {
+      if (!id) {
+        throw new Error("Transaction ID is required");
+      }
+
+      console.log("Updating transaction:", {
+        id,
+        data,
+      });
+
+      const response = await apiClient.put(
+        `/transactions/${id}`,
+        data
+      );
+
       return response.data;
     },
-    onSuccess: () => {
-      invalidateTransactionQueries(queryClient);
-      
-    
-  toast.success("Transaction updated successfully!", {
-      className: "!bg-indigo-950 !text-indigo-100 !border-indigo-800 shadow-md",
-});
 
+    onSuccess: (response) => {
+      console.log(
+        "Transaction updated successfully:",
+        response
+      );
+
+      invalidateTransactionQueries(
+        queryClient
+      );
+
+      toast.success(
+        "Transaction updated successfully!",
+        {
+          className:
+            "!bg-indigo-950 !text-indigo-100 !border-indigo-800 shadow-md",
+        }
+      );
     },
+
     onError: (error) => {
+      console.error(
+        "Transaction update failed:",
+        error
+      );
+
+      console.error(
+        "Server response:",
+        error.response?.data
+      );
+
       const errorMessage =
-        error.response?.data?.message || "Failed to update transaction";
-    toast.error(message, {
-  className: "!bg-indigo-950 !text-indigo-100 !border-indigo-800 shadow-md",
-});
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to update transaction";
+
+      toast.error(
+        errorMessage,
+        {
+          className:
+            "!bg-indigo-950 !text-indigo-100 !border-indigo-800 shadow-md",
+        }
+      );
     },
   });
 };

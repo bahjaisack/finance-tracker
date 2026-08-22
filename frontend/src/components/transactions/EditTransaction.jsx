@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -35,24 +35,50 @@ import {
 import { useUpdateTransaction } from "@/hooks/useTransactions";
 import { useGetCategories } from "@/hooks/useCategories";
 
+
+
+
 const transactionSchema = z.object({
-  title: z.string().min(2, "Title must be at least 2 characters"),
-  amount: z.coerce.number().positive("Amount must be greater than 0"),
+  title: z
+    .string()
+    .min(2, "Title must be at least 2 characters"),
+
+  amount: z.coerce
+    .number()
+    .positive("Amount must be greater than 0"),
+
   type: z.enum(["income", "expense"]),
-  category: z.string().min(1, "Please select a category"),
-  date: z.string().min(1, "Date is required"),
-  notes: z.string().optional(),
+
+  category: z
+    .string()
+    .min(1, "Please select a category"),
+
+  date: z
+    .string()
+    .min(1, "Date is required"),
+
+  notes: z
+    .string()
+    .optional(),
 });
 
-const getCategoryName = (category) => {
-  if (!category) return "";
 
-  if (typeof category === "string") {
-    return category;
+const getCategoryName = (category) => {
+  if (!category) {
+    return "";
   }
 
-  return category.name || "";
+  if (typeof category === "string") {
+    return category.trim();
+  }
+
+  return String(
+    category.name ||
+    category.categoryName ||
+    ""
+  ).trim();
 };
+
 
 const normalizeCategories = (data) => {
   const responseData =
@@ -61,218 +87,402 @@ const normalizeCategories = (data) => {
     data ||
     {};
 
-  const predefined = Array.isArray(responseData.predefined)
+  const predefined = Array.isArray(
+    responseData.predefined
+  )
     ? responseData.predefined
     : [];
 
-  const custom = Array.isArray(responseData.custom)
+  const custom = Array.isArray(
+    responseData.custom
+  )
     ? responseData.custom
     : [];
 
-  const combined = [...predefined, ...custom];
+  const combined = [
+    ...predefined,
+    ...custom,
+  ];
 
-  return combined.reduce((result, category) => {
+  const result = [];
+
+  combined.forEach((category) => {
     const name = getCategoryName(category);
 
     if (!name) {
-      return result;
+      return;
     }
+
+    const normalizedName =
+      name.toLowerCase().trim();
 
     const exists = result.some(
       (item) =>
         item.name.toLowerCase().trim() ===
-        name.toLowerCase().trim()
+        normalizedName
     );
 
-    if (!exists) {
-      result.push({
-        name,
-        type:
-          typeof category === "object"
-            ? category.type || "expense"
-            : "expense",
-
-        id:
-          typeof category === "object"
-            ? category._id || category.id || name
-            : name,
-      });
+    if (exists) {
+      return;
     }
 
-    return result;
-  }, []);
+    result.push({
+      name,
+
+      type:
+        typeof category === "object"
+          ? category.type || null
+          : null,
+
+      id:
+        typeof category === "object"
+          ? category._id ||
+            category.id ||
+            name
+          : name,
+    });
+  });
+
+  return result;
 };
+
 
 export const EditTransaction = ({
   transaction,
   open,
   onOpenChange,
 }) => {
-  const updateTransaction = useUpdateTransaction();
+
+  const updateTransaction =
+    useUpdateTransaction();
 
   const {
     data: categoriesData,
     isLoading: isLoadingCategories,
   } = useGetCategories();
 
-  const categories = normalizeCategories(categoriesData);
+  const categories =
+    normalizeCategories(categoriesData);
+
 
   const form = useForm({
-    resolver: zodResolver(transactionSchema),
+    resolver: zodResolver(
+      transactionSchema
+    ),
 
     defaultValues: {
       title: "",
       amount: "",
       type: "expense",
       category: "",
-      date: new Date().toISOString().split("T")[0],
+      date: "",
       notes: "",
     },
   });
 
-  const selectedType = form.watch("type");
 
-  const availableCategories = categories.filter(
-    (category) =>
-      !category.type ||
-      category.type === selectedType
-  );
+  const selectedType =
+    form.watch("type");
+
+
+ 
+
+  const availableCategories =
+    useMemo(() => {
+
+      return categories.filter(
+        (category) => {
+
+          if (!category.type) {
+            return true;
+          }
+
+          return (
+            category.type ===
+            selectedType
+          );
+        }
+      );
+
+    }, [
+      categories,
+      selectedType,
+    ]);
+
+
+ 
 
   useEffect(() => {
+
     if (!transaction) {
       return;
     }
 
-    const formattedDate = transaction.date
-      ? new Date(transaction.date)
-          .toISOString()
-          .split("T")[0]
-      : new Date().toISOString().split("T")[0];
+    const transactionDate =
+      transaction.date
+        ? new Date(transaction.date)
+            .toISOString()
+            .split("T")[0]
+        : new Date()
+            .toISOString()
+            .split("T")[0];
 
-    const categoryName = getCategoryName(
-      transaction.category
-    );
+
+    const categoryName =
+      getCategoryName(
+        transaction.category
+      );
+
 
     form.reset({
-      title: transaction.title || "",
-      amount: transaction.amount || "",
-      type: transaction.type || "expense",
-      category: categoryName,
-      date: formattedDate,
-      notes: transaction.notes || "",
-    });
-  }, [transaction, form]);
+      title:
+        transaction.title || "",
 
-  const handleTypeChange = (value, field) => {
+      amount:
+        transaction.amount ??
+        "",
+
+      type:
+        transaction.type === "income"
+          ? "income"
+          : "expense",
+
+      category:
+        categoryName,
+
+      date:
+        transactionDate,
+
+      notes:
+        transaction.notes || "",
+    });
+
+  }, [
+    transaction,
+    form,
+  ]);
+
+
+
+
+  const handleTypeChange = (
+    value,
+    field
+  ) => {
+
     field.onChange(value);
 
-    const currentCategory = form.getValues("category");
+    const currentCategory =
+      form.getValues("category");
 
-    const categoryStillValid = categories.some(
-      (category) =>
-        category.name === currentCategory &&
-        category.type === value
-    );
+    if (!currentCategory) {
+      return;
+    }
 
-    if (!categoryStillValid) {
-      form.setValue("category", "");
+
+    const categoryExists =
+      categories.some(
+        (category) => {
+
+          const sameName =
+            category.name
+              .toLowerCase()
+              .trim() ===
+            currentCategory
+              .toLowerCase()
+              .trim();
+
+          const sameType =
+            !category.type ||
+            category.type === value;
+
+          return (
+            sameName &&
+            sameType
+          );
+        }
+      );
+
+
+   
+
+    if (!categoryExists) {
+      form.setValue(
+        "category",
+        "",
+        {
+          shouldValidate: true,
+        }
+      );
     }
   };
 
+
+
   const onSubmit = (data) => {
+
     const id =
       transaction?._id ||
       transaction?.id;
 
+
     if (!id) {
+
       return;
     }
+
+
+   
+
+    const updateData = {
+      title: data.title.trim(),
+
+      amount: Number(
+        data.amount
+      ),
+
+      type: data.type,
+
+      category: data.category,
+
+      date: data.date,
+
+      notes:
+        data.notes?.trim() || "",
+    };
+
+
+
+   
+
+
 
     updateTransaction.mutate(
       {
         id,
-        data,
+        data: updateData,
       },
       {
-        onSuccess: () => {
+        onSuccess: (response) => {
+
           onOpenChange(false);
+        },
+
+        onError: (error) => {
+
+         
+
+        
         },
       }
     );
   };
+
+
+
 
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
     >
+
       <DialogContent className="sm:max-w-106">
+
         <DialogHeader>
+
           <DialogTitle>
             Edit Transaction
           </DialogTitle>
 
           <DialogDescription>
-            Update details for this income or expense item.
+            Update details for this
+            income or expense transaction.
           </DialogDescription>
+
         </DialogHeader>
 
+
         <Form {...form}>
+
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={form.handleSubmit(
+              onSubmit
+            )}
             className="space-y-4 pt-2"
           >
+
+
 
             <FormField
               control={form.control}
               name="title"
               render={({ field }) => (
+
                 <FormItem>
+
                   <FormLabel>
                     Title
                   </FormLabel>
 
                   <FormControl>
+
                     <Input
-                      placeholder="e.g., Grocery Shopping"
+                      placeholder="e.g. Grocery Shopping"
                       {...field}
                     />
+
                   </FormControl>
 
                   <FormMessage />
+
                 </FormItem>
+
               )}
             />
 
+
+
             <div className="grid grid-cols-2 gap-4">
+
               <FormField
                 control={form.control}
                 name="amount"
                 render={({ field }) => (
+
                   <FormItem>
+
                     <FormLabel>
                       Amount ($)
                     </FormLabel>
 
                     <FormControl>
+
                       <Input
                         type="number"
                         step="0.01"
+                        min="0"
                         placeholder="0.00"
                         {...field}
                       />
+
                     </FormControl>
 
                     <FormMessage />
+
                   </FormItem>
+
                 )}
               />
+
 
               <FormField
                 control={form.control}
                 name="type"
                 render={({ field }) => (
+
                   <FormItem>
+
                     <FormLabel>
                       Type
                     </FormLabel>
@@ -286,13 +496,21 @@ export const EditTransaction = ({
                         )
                       }
                     >
+
                       <FormControl>
+
                         <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
+
+                          <SelectValue
+                            placeholder="Select type"
+                          />
+
                         </SelectTrigger>
+
                       </FormControl>
 
                       <SelectContent>
+
                         <SelectItem value="expense">
                           Expense
                         </SelectItem>
@@ -300,20 +518,29 @@ export const EditTransaction = ({
                         <SelectItem value="income">
                           Income
                         </SelectItem>
+
                       </SelectContent>
+
                     </Select>
 
                     <FormMessage />
+
                   </FormItem>
+
                 )}
               />
+
             </div>
+
+
 
             <FormField
               control={form.control}
               name="category"
               render={({ field }) => (
+
                 <FormItem>
+
                   <FormLabel>
                     Category
                   </FormLabel>
@@ -321,10 +548,15 @@ export const EditTransaction = ({
                   <Select
                     value={field.value}
                     onValueChange={field.onChange}
-                    disabled={isLoadingCategories}
+                    disabled={
+                      isLoadingCategories
+                    }
                   >
+
                     <FormControl>
+
                       <SelectTrigger>
+
                         <SelectValue
                           placeholder={
                             isLoadingCategories
@@ -332,53 +564,77 @@ export const EditTransaction = ({
                               : "Select category"
                           }
                         />
+
                       </SelectTrigger>
+
                     </FormControl>
 
+
                     <SelectContent>
+
                       {availableCategories.length === 0 ? (
+
                         <div className="p-2 text-xs text-center text-slate-500">
-                          No categories found for{" "}
-                          {selectedType}
+                          No categories found
                         </div>
+
                       ) : (
+
                         availableCategories.map(
                           (category) => (
+
                             <SelectItem
-                              key={category.id}
-                              value={category.name}
+                              key={
+                                category.id
+                              }
+                              value={
+                                category.name
+                              }
                             >
                               {category.name}
                             </SelectItem>
+
                           )
                         )
+
                       )}
+
                     </SelectContent>
+
                   </Select>
 
                   <FormMessage />
+
                 </FormItem>
+
               )}
             />
+
 
             <FormField
               control={form.control}
               name="date"
               render={({ field }) => (
+
                 <FormItem>
+
                   <FormLabel>
                     Date
                   </FormLabel>
 
                   <FormControl>
+
                     <Input
                       type="date"
                       {...field}
                     />
+
                   </FormControl>
 
                   <FormMessage />
+
                 </FormItem>
+
               )}
             />
 
@@ -387,41 +643,60 @@ export const EditTransaction = ({
               control={form.control}
               name="notes"
               render={({ field }) => (
+
                 <FormItem>
+
                   <FormLabel>
                     Notes
                   </FormLabel>
 
                   <FormControl>
+
                     <Input
                       placeholder="Optional notes"
                       {...field}
                     />
+
                   </FormControl>
 
                   <FormMessage />
+
                 </FormItem>
+
               )}
             />
 
-
             <Button
               type="submit"
-              disabled={updateTransaction.isPending}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white mt-2"
+              disabled={
+                updateTransaction.isPending
+              }
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
             >
+
               {updateTransaction.isPending ? (
+
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
+
                   Updating...
+
                 </>
+
               ) : (
+
                 "Save Changes"
+
               )}
+
             </Button>
+
           </form>
+
         </Form>
+
       </DialogContent>
+
     </Dialog>
   );
 };

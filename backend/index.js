@@ -32,7 +32,31 @@ app.use(
     credentials: true,
   })
 );
-app.use(helmet());
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https://res.cloudinary.com",
+        ],
+
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        fontSrc: ["'self'", "data:"],
+
+        connectSrc: [
+          "'self'",
+          "https://res.cloudinary.com",
+        ],
+      },
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 
 
