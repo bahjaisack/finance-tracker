@@ -35,15 +35,6 @@ app.use(
 app.use(helmet());
 app.use(express.urlencoded({ extended: true }));
 
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "success", message: "Api is working" });
-});
-app.get("/", (req, res) => {
-  res.status(200).json({
-    status: "success",
-    message: "Finance Tracker API is running",
-  });
-});
 
 // swagger
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -56,18 +47,28 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/admin", adminRoutes);
 
-if (process.env.NODE_ENV === "production") {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
 
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+ // server frontend in production
 
-  app.get(/.*/, (req, res) => {
-    res.sendFile(
-      path.join(__dirname, "../frontend/dist/index.html")
-    );
-  });
+if(process.env.NODE_ENV === "production") {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+  // server frontend
+  app.get(/.*/, (req, res)=>{
+    res.send(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'));
+  })
 }
+
+
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "success", message: "Api is working" });
+});
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Finance Tracker API is running",
+  });
+});
 
 app.use(notFound);
 app.use(errorHandler);
