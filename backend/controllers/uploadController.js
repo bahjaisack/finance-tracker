@@ -1,5 +1,5 @@
 import cloudinary from "../utility/cloudinary.js";
-import User from "../models/userModel.js";
+import User from "../models/UserModel.js";
 
 export const uploadProfilePicture = async (req, res, next) => {
   try {

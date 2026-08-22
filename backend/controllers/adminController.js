@@ -1,4 +1,4 @@
-import User from "../models/userModel.js";
+import User from "../models/UserModel.js";
 import Transaction from "../models/transactionModel.js";
 
 export const getAdminOverview = async (req, res, next) => {
