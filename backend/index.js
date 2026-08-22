@@ -17,6 +17,8 @@ import uploadRoutes from "./routes/uploadRoute.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./utility/swagger.js"; 
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(express.json());
@@ -54,6 +56,18 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/admin", adminRoutes);
 
+if (process.env.NODE_ENV === "production") {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+  app.get(/.*/, (req, res) => {
+    res.sendFile(
+      path.join(__dirname, "../frontend/dist/index.html")
+    );
+  });
+}
 
 app.use(notFound);
 app.use(errorHandler);
