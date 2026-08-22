@@ -40,11 +40,6 @@ export const useProfilePicture = () => {
 
       formData.append("image", file);
 
-      console.log("Uploading file:", {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-      });
 
       const res = await apiClient.post(
         "/upload/profile-picture",
@@ -55,7 +50,6 @@ export const useProfilePicture = () => {
     },
 
     onSuccess: (responseData) => {
-      console.log("Profile picture uploaded successfully:", responseData);
 
       queryClient.invalidateQueries({
         queryKey: ["profile-picture"],

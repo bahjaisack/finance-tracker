@@ -53,10 +53,6 @@ export const useUpdateTransaction = () => {
         throw new Error("Transaction ID is required");
       }
 
-      console.log("Updating transaction:", {
-        id,
-        data,
-      });
 
       const response = await apiClient.put(
         `/transactions/${id}`,
@@ -67,10 +63,7 @@ export const useUpdateTransaction = () => {
     },
 
     onSuccess: (response) => {
-      console.log(
-        "Transaction updated successfully:",
-        response
-      );
+    
 
       invalidateTransactionQueries(
         queryClient

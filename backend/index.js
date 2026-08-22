@@ -74,13 +74,24 @@ app.use("/api/admin", adminRoutes);
 
  // server frontend in production
 
-if(process.env.NODE_ENV === "production") {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
-  // server frontend
-  app.get(/.*/, (req, res)=>{
-    res.send(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'));
-  })
+if (process.env.NODE_ENV === "production") {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
+  const frontendPath = path.join(
+    __dirname,
+    "..",
+    "frontend",
+    "dist"
+  );
+
+  app.use(express.static(frontendPath));
+
+  app.get(/.*/, (req, res) => {
+    res.sendFile(
+      path.join(frontendPath, "index.html")
+    );
+  });
 }
 
 
