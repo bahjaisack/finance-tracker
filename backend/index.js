@@ -36,6 +36,12 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "success", message: "Api is working" });
 });
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Finance Tracker API is running",
+  });
+});
 
 // swagger
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
